@@ -1,0 +1,2 @@
+# Views for rutas app
+

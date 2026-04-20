@@ -1,0 +1,4 @@
+Django==6.0.4
+python-decouple==3.8
+psycopg==3.1.15
+gunicorn==21.2.0
