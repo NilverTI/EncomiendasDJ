@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard - Encomiendas{% endblock %}
+{% block content %}
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-1">Activas</h6>
+                        <h2 class="card-title">{{ encomiendas_activas }}</h2>
+                    </div>
+                    <i class="bi bi-clock-history fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-1">En tránsito</h6>
+                        <h2 class="card-title">{{ en_transito }}</h2>
+                    </div>
+                    <i class="bi bi-truck fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-1">Con retraso</h6>
+                        <h2 class="card-title">{{ con_retraso }}</h2>
+                    </div>
+                    <i class="bi bi-exclamation-triangle fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-1">Entregadas hoy</h6>
+                        <h2 class="card-title">{{ entregadas_hoy }}</h2>
+                    </div>
+                    <i class="bi bi-check-circle fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0"><i class="bi bi-clock-history"></i> Últimas Encomiendas Registradas</h5>
+    </div>
+    <div class="card-body">
+        {% if ultimas_encomiendas %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Remitente</th>
+                        <th>Destinatario</th>
+                        <th>Ruta</th>
+                        <th>Estado</th>
+                        <th>Registro</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for enc in ultimas_encomiendas %}
+                    <tr class="{% if enc.tiene_retraso %}table-danger{% endif %}">
+                        <td><strong>{{ enc.codigo }}</strong></td>
+                        <td>{{ enc.remitente.nombre_completo }}</td>
+                        <td>{{ enc.destinatario.nombre_completo }}</td>
+                        <td>{{ enc.ruta }}</td>
+                        <td><span class="badge badge-{{ enc.estado }}">{{ enc.get_estado_display }}</span></td>
+                        <td>{{ enc.fecha_registro|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            <a href="{% url 'envios:detalle' enc.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center mb-0">No hay encomiendas registradas.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

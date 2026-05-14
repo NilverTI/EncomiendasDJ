@@ -1,0 +1,140 @@
+:root {
+    /* Colores de estados de encomienda */
+    --estado-pendiente: #6c757d;
+    --estado-transito: #0d6efd;
+    --estado-destino: #fd7e14;
+    --estado-entregado: #198754;
+    --estado-devuelto: #dc3545;
+    /* Colores generales del sistema */
+    --primary-color: #0d6efd;
+    --secondary-color: #6c757d;
+    --success-color: #198754;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #0dcaf0;
+    --light-color: #f8f9fa;
+    --dark-color: #212529;
+}
+
+body {
+    background-color: var(--light-color);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar-brand {
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    border-radius: 0.5rem;
+}
+
+.card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+/* Badges de estado de encomienda */
+.badge-estado {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .3px;
+    white-space: nowrap;
+}
+
+.badge-PE {
+    background-color: var(--estado-pendiente);
+    color: white;
+}
+.badge-TR {
+    background-color: var(--estado-transito);
+    color: white;
+}
+.badge-DE {
+    background-color: var(--estado-destino);
+    color: white;
+}
+.badge-EN {
+    background-color: var(--estado-entregado);
+    color: white;
+}
+.badge-DV {
+    background-color: var(--estado-devuelto);
+    color: white;
+}
+
+/* Tabla */
+.table th {
+    font-weight: 600;
+    background-color: #f1f3f5;
+}
+
+/* Estilos para formularios */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Botones */
+.btn {
+    border-radius: 0.375rem;
+}
+
+/* Paginación */
+.pagination .page-link {
+    color: var(--primary-color);
+}
+.pagination .page-item.active .page-link {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* Animación para alertas */
+@keyframes fadeAlert {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-10px); }
+}
+.fadeAlert {
+    animation: fadeAlert 0.3s ease-in-out;
+}
+
+/* Footer */
+footer {
+    margin-top: auto;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Cards de estadísticas */
+.card.bg-primary, .card.bg-warning, .card.bg-danger, .card.bg-success {
+    border: none;
+}
+.card.bg-primary .card-subtitle,
+.card.bg-warning .card-subtitle,
+.card.bg-danger .card-subtitle,
+.card.bg-success .card-subtitle {
+    color: rgba(255, 255, 255, 0.85);
+}
+.card.bg-primary .card-title,
+.card.bg-warning .card-title,
+.card.bg-danger .card-title,
+.card.bg-success .card-title {
+    color: #fff;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 0.9rem;
+    }
+    .btn-group .btn {
+        padding: 0.375rem 0.5rem;
+        font-size: 0.875rem;
+    }
+}
