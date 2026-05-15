@@ -1,6 +1,6 @@
 # Sistema de Gestion de Encomiendas
 
-Proyecto Django para la Sesion 3 de ORM con las apps `clientes`, `rutas` y `envios`, ejecutado con Docker y PostgreSQL.
+Proyecto Django para las sesiones de ORM y Django REST Framework. Usa PostgreSQL como unica base de datos persistente e incluye API versionada, JWT, Swagger, filtros, paginacion, throttling y tests automatizados.
 
 ## Requisitos
 
@@ -19,11 +19,15 @@ Accesos:
 
 - App: `http://localhost:8000/`
 - Admin: `http://localhost:8000/admin/`
+- Swagger: `http://localhost:8000/api/docs/`
+- API v1: `http://localhost:8000/api/v1/`
+- API v2: `http://localhost:8000/api/v2/`
 
 ## Estructura
 
 ```text
 config/      configuracion del proyecto
+api/         serializers, viewsets, filtros, permisos, throttles y vistas DRF
 clientes/    modelo y admin de clientes
 rutas/       modelo y admin de rutas
 envios/      empleados, encomiendas, historial, validators y querysets
@@ -46,7 +50,39 @@ DB_PASSWORD=change-me
 DB_HOST=db
 DB_PORT=5432
 DB_CONN_MAX_AGE=60
+CORS_ALLOW_ALL_ORIGINS=False
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000
 ```
+
+## API DRF
+
+Autenticacion JWT:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/token/ \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin"}'
+```
+
+Endpoints principales:
+
+- `GET|POST /api/v1/encomiendas/`
+- `GET|PUT|PATCH|DELETE /api/v1/encomiendas/{id}/`
+- `POST /api/v1/encomiendas/{id}/cambiar_estado/`
+- `GET /api/v1/encomiendas/con_retraso/`
+- `GET /api/v1/encomiendas/pendientes/`
+- `GET /api/v1/encomiendas/estadisticas/`
+- `POST /api/v1/encomiendas/bulk_create/`
+- `PATCH /api/v1/encomiendas/bulk_estado/`
+- `GET /api/v1/clientes/`
+- `GET /api/v1/rutas/`
+
+Endpoints demostrativos de fundamentos DRF:
+
+- `GET|POST /api/v1/fundamentos/fbv/encomiendas/`
+- `GET|POST /api/v1/fundamentos/apiview/encomiendas/`
+- `GET|POST /api/v1/fundamentos/mixins/encomiendas/`
+- `GET|POST /api/v1/fundamentos/generics/encomiendas/`
 
 ## Comandos utiles
 
@@ -59,6 +95,8 @@ docker compose exec web python manage.py makemigrations
 docker compose exec web python manage.py migrate
 docker compose exec web python manage.py showmigrations
 docker compose exec web python manage.py test
+docker compose exec web pytest
+docker compose exec web python manage.py spectacular --validate --file schema.yml
 docker compose exec web python manage.py shell
 ```
 
@@ -150,5 +188,5 @@ except ValidationError as exc:
 ## Notas de desarrollo
 
 - El contenedor `web` espera a PostgreSQL y aplica migraciones automaticamente al iniciar.
-- La raiz `/` muestra la pagina por defecto de Django para no interferir con la sesion.
+- El endpoint `/api/v1/encomiendas/estadisticas/` usa cache local en memoria durante 15 minutos; los datos del sistema se guardan solo en PostgreSQL.
 - El proyecto esta orientado a desarrollo y demostracion, no a produccion.

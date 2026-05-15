@@ -177,27 +177,27 @@ class Encomienda(models.Model):
         super().save(*args, **kwargs)
 
     @property
-    def esta_entregada(self):
+    def esta_entregada(self) -> bool:
         return self.estado == EstadoEnvio.ENTREGADO
 
     @property
-    def esta_en_transito(self):
+    def esta_en_transito(self) -> bool:
         return self.estado == EstadoEnvio.EN_TRANSITO
 
     @property
-    def dias_en_transito(self):
+    def dias_en_transito(self) -> int:
         if not self.fecha_registro:
             return 0
         return (timezone.now().date() - self.fecha_registro.date()).days
 
     @property
-    def tiene_retraso(self):
+    def tiene_retraso(self) -> bool:
         if not self.fecha_entrega_est or self.esta_entregada:
             return False
         return timezone.localdate() > self.fecha_entrega_est
 
     @property
-    def descripcion_corta(self):
+    def descripcion_corta(self) -> str:
         return (
             f"{self.descripcion[:50]}..."
             if len(self.descripcion) > 50

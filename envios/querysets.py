@@ -50,7 +50,7 @@ class EncomiendaQuerySet(models.QuerySet):
             "destinatario",
             "ruta",
             "empleado_registro",
-        )
+        ).prefetch_related("historial__empleado")
 
 
 class ClienteQuerySet(models.QuerySet):

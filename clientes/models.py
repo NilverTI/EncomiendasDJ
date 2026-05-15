@@ -51,15 +51,15 @@ class Cliente(models.Model):
         super().save(*args, **kwargs)
 
     @property
-    def nombre_completo(self):
+    def nombre_completo(self) -> str:
         return f"{self.apellidos}, {self.nombres}"
 
     @property
-    def esta_activo(self):
+    def esta_activo(self) -> bool:
         return self.estado == EstadoGeneral.ACTIVO
 
     @property
-    def total_encomiendas_enviadas(self):
+    def total_encomiendas_enviadas(self) -> int:
         return self.envios_como_remitente.count()
 
     def __str__(self):
