@@ -11,3 +11,11 @@ class EmpleadoRateThrottle(UserRateThrottle):
 
 class CambioEstadoThrottle(UserRateThrottle):
     scope = "cambio_estado"
+
+
+class BurstRateThrottle(UserRateThrottle):
+    scope = "burst"
+
+
+class SustainedRateThrottle(UserRateThrottle):
+    scope = "sustained"

@@ -10,7 +10,7 @@ SECRET_KEY = config(
     "SECRET_KEY",
     default="django-insecure-change-me-before-production",
 )
-DEBUG = config("DEBUG", default=True, cast=bool)
+DEBUG = config("DEBUG", default="True", cast=lambda v: v.lower() in ("true", "1", "yes", "on"))
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
     default="localhost,127.0.0.1,web",
@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "clientes",
     "rutas",
     "envios",
+    "core",
     "api",
     "rest_framework",
     "rest_framework_simplejwt",
@@ -128,12 +129,14 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework.authentication.BasicAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 15,
+    "PAGE_SIZE": 10,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
@@ -150,6 +153,8 @@ REST_FRAMEWORK = {
         "empleado": "100/min",
         "cambio_estado": "30/hour",
         "login_attempt": "5/min",
+        "burst": "60/min",
+        "sustained": "200/hour",
     },
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
     "ALLOWED_VERSIONS": ["v1", "v2"],
@@ -161,7 +166,7 @@ REST_FRAMEWORK = {
 # ── JWT ───────────────────────────────────────────────────────────
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
     "USER_ID_FIELD": "id",
@@ -216,6 +221,8 @@ SPECTACULAR_SETTINGS = {
         {"name": "Encomiendas", "description": "Gestion de envios"},
         {"name": "Clientes", "description": "Listado de clientes activos"},
         {"name": "Rutas", "description": "Rutas disponibles"},
+        {"name": "Articulos", "description": "Gestion de articulos"},
+        {"name": "Ordenes", "description": "Gestion de ordenes de compra"},
         {"name": "Auth", "description": "Autenticacion JWT"},
     ],
     "ENUM_NAME_OVERRIDES": {

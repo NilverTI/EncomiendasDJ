@@ -1,10 +1,11 @@
-from rest_framework import viewsets, generics, status
+from rest_framework import viewsets, generics, status, filters
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from django.core.cache import cache
+from django.db.models import Count
 
 from drf_spectacular.utils import (
     extend_schema,
@@ -18,6 +19,7 @@ from drf_spectacular.types import OpenApiTypes
 from envios.models import Encomienda, Empleado
 from clientes.models import Cliente
 from rutas.models import Ruta
+from core.models import Articulo, OrdenCompraCliente
 
 from api.serializers import (
     EncomiendaSerializer,
@@ -27,11 +29,21 @@ from api.serializers import (
     HistorialEstadoSerializer,
     ClienteSerializer,
     RutaSerializer,
+    ArticuloSerializer,
+    ArticuloListSerializer,
+    ArticuloCreateSerializer,
+    OrdenSerializer,
+    ListaPrecioSerializer,
 )
-from api.pagination import EncomiendaPagination, HistorialPagination, ClientePagination
+from api.pagination import (
+    EncomiendaPagination,
+    HistorialPagination,
+    ClientePagination,
+    StandardResultsSetPagination,
+)
 from api.filters import EncomiendaFilter
-from api.permissions import EsEmpleadoActivo, EsPropietarioOAdmin
-from api.throttles import EmpleadoRateThrottle, CambioEstadoThrottle
+from api.permissions import EsEmpleadoActivo, EsPropietarioOAdmin, IsAdminOrReadOnly
+from api.throttles import EmpleadoRateThrottle, CambioEstadoThrottle, SustainedRateThrottle
 from api.exceptions import EstadoInvalidoError, EncomiendaYaEntregadaError
 from config.settings import CACHE_TTL
 
@@ -310,3 +322,82 @@ class EncomiendaViewSet(viewsets.ModelViewSet):
             "no_encontrados": no_encontrados,
             "total": len(actualizadas),
         })
+
+
+# ── POS Viewsets ────────────────────────────────────────────────────
+
+class ArticuloViewSet(viewsets.ModelViewSet):
+    queryset = Articulo.objects.select_related("grupo", "linea").prefetch_related("precios")
+    serializer_class = ArticuloSerializer
+    permission_classes = [IsAdminOrReadOnly]
+    pagination_class = StandardResultsSetPagination
+    throttle_classes = [SustainedRateThrottle]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["grupo", "linea", "estado"]
+    search_fields = ["codigo_articulo", "descripcion", "codigo_barras"]
+    ordering_fields = ["codigo_articulo", "descripcion", "stock"]
+    ordering = ["codigo_articulo"]
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return ArticuloListSerializer
+        if self.action == "create":
+            return ArticuloCreateSerializer
+        return ArticuloSerializer
+
+    def get_queryset(self):
+        qs = Articulo.objects.select_related("grupo", "linea").prefetch_related("precios")
+        min_stock = self.request.query_params.get("stock_min")
+        if min_stock:
+            qs = qs.filter(stock__gte=min_stock)
+        max_stock = self.request.query_params.get("stock_max")
+        if max_stock:
+            qs = qs.filter(stock__lte=max_stock)
+        return qs
+
+    @action(detail=True, methods=["get"])
+    def precios(self, request, pk=None, **kwargs):
+        articulo = self.get_object()
+        precios = articulo.precios.all()
+        serializer = ListaPrecioSerializer(precios, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"])
+    def bajo_stock(self, request, **kwargs):
+        qs = self.get_queryset().filter(stock__lte=5)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+
+class OrdenViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = OrdenSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["estado"]
+    search_fields = ["numero_orden", "cliente_nombre"]
+    ordering_fields = ["fecha_emision", "total"]
+    ordering = ["-fecha_emision"]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return OrdenCompraCliente.objects.prefetch_related(
+                "items__articulo"
+            ).all()
+        return OrdenCompraCliente.objects.prefetch_related(
+            "items__articulo"
+        ).filter(cliente_correo=user.email)
+
+    @action(detail=True, methods=["post"])
+    def cancelar(self, request, pk=None, **kwargs):
+        orden = self.get_object()
+        if orden.estado != "PE":
+            return Response(
+                {"error": "Solo se pueden cancelar ordenes pendientes."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        orden.estado = "CA"
+        orden.save()
+        serializer = self.get_serializer(orden)
+        return Response(serializer.data)

@@ -6,6 +6,7 @@ from django.utils import timezone
 from clientes.models import Cliente
 from rutas.models import Ruta
 from envios.models import Encomienda, HistorialEstado, Empleado
+from core.models import GrupoArticulo, LineaArticulo, Articulo, ListaPrecio, OrdenCompraCliente, ItemOrdenCompraCliente
 
 
 class ClienteSerializer(serializers.ModelSerializer):
@@ -278,3 +279,149 @@ class EncomiendaV2Serializer(serializers.ModelSerializer):
             "generado": timezone.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
             "puede_editar": not obj.esta_entregada,
         }
+
+
+# ── POS Serializers ─────────────────────────────────────────────────
+
+class GrupoArticuloSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GrupoArticulo
+        fields = ["id", "nombre", "descripcion", "estado"]
+
+
+class LineaArticuloSerializer(serializers.ModelSerializer):
+    grupo_nombre = serializers.ReadOnlyField(source="grupo.nombre")
+
+    class Meta:
+        model = LineaArticulo
+        fields = ["id", "grupo", "grupo_nombre", "nombre", "descripcion", "estado"]
+
+
+class ListaPrecioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ListaPrecio
+        fields = ["id", "articulo", "precio_1", "precio_2", "precio_3",
+                   "created_at", "updated_at"]
+        read_only_fields = ["articulo", "created_at", "updated_at"]
+
+
+class ArticuloSerializer(serializers.ModelSerializer):
+    grupo_nombre = serializers.ReadOnlyField(source="grupo.nombre")
+    linea_nombre = serializers.ReadOnlyField(source="linea.nombre")
+    precios = ListaPrecioSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Articulo
+        fields = [
+            "id", "codigo_articulo", "codigo_barras", "descripcion",
+            "grupo", "grupo_nombre", "linea", "linea_nombre",
+            "stock", "precio_compra", "precio_venta",
+            "precios", "estado", "created_at", "updated_at",
+        ]
+
+
+class ArticuloListSerializer(serializers.ModelSerializer):
+    grupo_nombre = serializers.ReadOnlyField(source="grupo.nombre")
+    linea_nombre = serializers.ReadOnlyField(source="linea.nombre")
+
+    class Meta:
+        model = Articulo
+        fields = [
+            "id", "codigo_articulo", "descripcion",
+            "grupo_nombre", "linea_nombre",
+            "stock", "precio_venta", "estado",
+        ]
+
+
+class DynamicFieldsModelSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        fields = kwargs.pop("fields", None)
+        super().__init__(*args, **kwargs)
+        if fields:
+            allowed = set(fields)
+            for field_name in set(self.fields):
+                if field_name not in allowed:
+                    self.fields.pop(field_name)
+
+
+class ArticuloDynamicSerializer(DynamicFieldsModelSerializer):
+    class Meta:
+        model = Articulo
+        fields = "__all__"
+
+
+class ItemOrdenSerializer(serializers.ModelSerializer):
+    articulo_codigo = serializers.ReadOnlyField(source="articulo.codigo_articulo")
+    articulo_descripcion = serializers.ReadOnlyField(source="articulo.descripcion")
+
+    class Meta:
+        model = ItemOrdenCompraCliente
+        fields = [
+            "id", "articulo", "articulo_codigo", "articulo_descripcion",
+            "cantidad", "precio_unitario", "subtotal",
+        ]
+
+
+class OrdenSerializer(serializers.ModelSerializer):
+    items = ItemOrdenSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = OrdenCompraCliente
+        fields = [
+            "id", "numero_orden", "cliente_nombre", "cliente_correo",
+            "fecha_emision", "total", "estado", "observaciones", "items",
+        ]
+
+
+class ArticuloCreateSerializer(serializers.ModelSerializer):
+    precio_1 = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+
+    class Meta:
+        model = Articulo
+        fields = [
+            "codigo_articulo", "codigo_barras", "descripcion",
+            "grupo", "linea", "stock", "precio_compra", "precio_venta",
+            "precio_1", "estado",
+        ]
+
+    def validate_codigo_articulo(self, value):
+        if Articulo.objects.filter(codigo_articulo=value).exists():
+            raise serializers.ValidationError("El código de artículo ya existe.")
+        if len(value) < 4:
+            raise serializers.ValidationError(
+                "El código debe tener al menos 4 caracteres."
+            )
+        return value
+
+    def validate_descripcion(self, value):
+        if len(value) < 5:
+            raise serializers.ValidationError(
+                "La descripción debe tener al menos 5 caracteres."
+            )
+        if len(value) > 150:
+            raise serializers.ValidationError(
+                "La descripción no debe superar los 150 caracteres."
+            )
+        return value
+
+    def validate_stock(self, value):
+        if value < 0:
+            raise serializers.ValidationError("El stock no puede ser negativo.")
+        return value
+
+    def validate_linea(self, value):
+        grupo_id = self.initial_data.get("grupo")
+        if grupo_id and value.grupo_id != int(grupo_id):
+            raise serializers.ValidationError(
+                "La línea debe pertenecer al grupo seleccionado."
+            )
+        return value
+
+    def create(self, validated_data):
+        precio_1 = validated_data.pop("precio_1", None)
+        articulo = Articulo.objects.create(**validated_data)
+        if precio_1 is not None:
+            ListaPrecio.objects.create(articulo=articulo, precio_1=precio_1)
+        else:
+            ListaPrecio.objects.create(articulo=articulo, precio_1=articulo.precio_venta)
+        return articulo
